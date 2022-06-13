@@ -1,4 +1,5 @@
 const CORE_ID = process.env.BOT_TOKEN;
+
 const {
   Telegraf,
   Scenes,
@@ -394,11 +395,12 @@ bot.use(stage.middleware());
 bot.telegram.setMyCommands([
   { command: 'learn', description: 'Начать учебную сессию' },
   { command: 'stoplearn', description: 'остановить учебную сессию' },
+  { command: 'state', description: 'текущая задача' },
   { command: 'configure', description: 'Настроики обучения' },
   // { command: 'delayed', description: 'Delayed msg' },
   // { command: 'interval', description: 'interval msg' },
   { command: 'statistic', description: 'статистика учёбы' },
-  { command: 'cleaninterval', description: 'clenup intervals' },
+  // { command: 'cleaninterval', description: 'clenup intervals' },
 ]);
 
 bot.start(async (ctx) => {
@@ -456,6 +458,19 @@ bot.command('interval', (ctx) => {
 bot.command('cleaninterval', (ctx) => {
   ctx.reply('all interval cleared');
   cleanUpIntervals();
+});
+
+bot.command('state', async (ctx) => {
+  if (currentPomodoro) {
+    await ctx.reply(`Ваша текущая задача ${currentPomodoro.targetOfRun}`);
+    const elapsedTime = new Date() - currentPomodoro.startTimestamp;
+    const elapsedTimeInMin = elapsedTime / 1000 / 60;
+    const elapsedTimeTrunc = Math.trunc(elapsedTimeInMin);
+
+    await ctx.reply(`Прошло времени: ${elapsedTimeTrunc} min`);
+  } else {
+    ctx.reply('Нет Активной задачи, самое время начать!');
+  }
 });
 
 bot.command('wizard', (ctx) => ctx.scene.enter('WIZARD_DIALOG'));
