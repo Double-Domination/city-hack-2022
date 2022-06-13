@@ -103,8 +103,12 @@ class PomodoroRun {
     this.durationTime = 0;
     this.reflections = null;
     this.delayId = setTimeout(() => {
-      this.finishPomodoro();
-    }, POMODORO_DURATION);
+      this.forceInterrrupt();
+    }, 60000 * 3);
+
+    this.icx.reply(
+      ' таймер на задание сработает через 3 мин в целях демонстрации',
+    );
   }
   forceInterrrupt() {
     this.isActive = false;
@@ -113,8 +117,9 @@ class PomodoroRun {
     this.durationTime = this.startTimestamp - this.endTimestamp;
     this.durationTime = this.durationTime / 1000 / 60;
     clearInterval(this.delayId);
-    performedLearnSessions.push(this);
     this.icx.scene.enter('REFLECTION_DIALOG');
+    performedLearnSessions.push(this);
+    currentPomodoro = null;
 
     // startRefSession(this.reflections);
   }
@@ -318,7 +323,7 @@ runReflection.enter(async (ctx) => {
   await runReflection.on('callback_query', async (ctx, msg) => {
     // console.log(ctx.session.LearnerData.gender);
     // console.log(ctx.callbackQuery.data);
-    tmpLearnerData.tmpReflection = ctx.callbackQuery.data;
+    tmpLearnerData.tmpReflection = await ctx.callbackQuery.data;
     await ctx.reply(`отлично!`);
     // console.log(tmpLearnerData);
     // console.log(tmpLearnerData.length);
@@ -326,6 +331,7 @@ runReflection.enter(async (ctx) => {
     // ctx.scene.enter('LEARN_SESSION');
     ctx.scene.leave();
   });
+  ctx.scene.leave();
 });
 
 // runReflection.on('text', async (ctx) => {
@@ -481,8 +487,21 @@ bot.telegram.setMyCommands([
 ]);
 
 bot.start(async (ctx) => {
+  const generalKbd = {
+    reply_markup: JSON.stringify({
+      keyboard: [
+        [{ text: '/learn', callback_data: 'btn1pushed' }],
+        [{ text: '/stoplearn', callback_data: 'btn2Pushed' }],
+        [{ text: '/state', callback_data: 'btn3Pushed' }],
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    }),
+  };
+
   await ctx.reply(
     'Добро пожаловать, я помогу выучиться масксимально быстро и сохранить мотивацию.',
+    generalKbd,
   );
   await ctx.reply('/configure');
 });
@@ -510,7 +529,7 @@ bot.command('statistic', (ctx) => {
       rateUser = 'PRO';
       break;
 
-    case numberOfRuns > 4:
+    case numberOfRuns > 4 && numberOfRuns > 0:
       rateUser = 'PRO';
       break;
 
