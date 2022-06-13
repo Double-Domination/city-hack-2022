@@ -1,5 +1,4 @@
 const CORE_ID = process.env.BOT_TOKEN;
-
 const {
   Telegraf,
   Scenes,
@@ -24,6 +23,27 @@ let performedLearnSessions = [];
 let currentPomodoro = null;
 
 let tempTargetRun = '';
+
+// async function startRefSession(recivedRun) {
+//   console.log(performedLearnSessions);
+//   // return;
+//   const reflectionsKeyboard = {
+//     reply_markup: JSON.stringify({
+//       inline_keyboard: [
+//         [
+//           { text: 'Крутяк!', callback_data: '1' },
+//           { text: 'Не очень', callback_data: '2' },
+//         ],
+//       ],
+//     }),
+//   };
+//   await ctx.reply('Как ощущения?', reflectionsKeyboard);
+//   await ctx.on('callback_query', async (ctx) => {
+//     recivedRun = await ctx.callbackQuery.data;
+//   });
+//   console.log(performedLearnSessions);
+//   return;
+// }
 
 let appIntervals = [];
 const cleanUpIntervals = () => {
@@ -70,12 +90,14 @@ class LearnerRecord {
 
 class PomodoroRun {
   // all pomodoro runs has predefined duration 45 min
-  constructor(targetOfRun) {
+  constructor(targetOfRun, recivedCTX) {
+    this.icx = recivedCTX;
     this.targetOfRun = targetOfRun;
     this.isActive = true;
     this.isForceInterrupted = false;
     this.startTimestamp = new Date();
     this.durationTime = 0;
+    this.reflections = null;
     this.delayId = setTimeout(() => {
       this.finishPomodoro();
     }, POMODORO_DURATION);
@@ -84,17 +106,22 @@ class PomodoroRun {
     this.isActive = false;
     this.isForceInterrupted = true;
     this.endTimestamp = new Date();
-    this.durationTime = this.endTimestamp - this.startTimestamp;
+    this.durationTime = this.startTimestamp - this.endTimestamp;
     this.durationTime = this.durationTime / 1000 / 60;
     clearInterval(this.delayId);
-    this.startReflectionSession();
+    performedLearnSessions.push(this);
+    this.icx.scene.enter('REFLECTION_DIALOG');
+
+    // startRefSession(this.reflections);
   }
-  finishPomodoro() {
+  async finishPomodoro() {
     this.isActive = false;
     this.endTimestamp = new Date();
     this.durationTime = this.endTimestamp - this.startTimestamp;
     this.durationTime = this.durationTime / 1000 / 60;
-    this.startReflectionSession();
+    performedLearnSessions.push(this);
+    // startRefSession(this.reflections);
+    // startRefSession(this.reflections);
   }
 
   startReflectionSession() {
@@ -239,7 +266,7 @@ learnSession.enter(async (ctx) => {
     console.log(curInput);
     if (curInput.length > 2) {
       // await ctx.reply('Цель должна быть строкой больше двух символов!');
-      currentPomodoro = new PomodoroRun(curInput);
+      currentPomodoro = new PomodoroRun(curInput, ctx);
       await ctx.reply(
         `Отлично! Начинаем ${currentPomodoro.targetOfRun}. Я оповещу вас когда таймер закончится!`,
       );
@@ -270,6 +297,51 @@ learnSession.enter(async (ctx) => {
 // });
 
 /////////
+//////
+const runReflection = new Scenes.BaseScene('REFLECTION_DIALOG');
+runReflection.enter(async (ctx) => {
+  const reflectionInlineKeybord = {
+    reply_markup: JSON.stringify({
+      inline_keyboard: [
+        [
+          { text: 'Крутяк!!!', callback_data: 'good' },
+          { text: 'Не очень', callback_data: 'bad' },
+        ],
+      ],
+    }),
+  };
+  await ctx.reply('Как прошло,', reflectionInlineKeybord);
+  await runReflection.on('callback_query', async (ctx, msg) => {
+    // console.log(ctx.session.LearnerData.gender);
+    // console.log(ctx.callbackQuery.data);
+    tmpLearnerData.tmpReflection = ctx.callbackQuery.data;
+    await ctx.reply(`отлично!`);
+    // console.log(tmpLearnerData);
+    // console.log(tmpLearnerData.length);
+
+    // ctx.scene.enter('LEARN_SESSION');
+    ctx.scene.leave();
+  });
+});
+
+// runReflection.on('text', async (ctx) => {
+//   const curInput = Number(ctx.message.text);
+//   if (curInput && curInput > 0) {
+//     await ctx.reply('thx for answer');
+//     ctx.scene.enter('NAME_DIALOG');
+//   } else {
+//     await ctx.reply('wrong input data');
+//     ctx.scene.reenter();
+//   }
+// });
+runReflection.on('message', (ctx) => {
+  ctx.reply('must be a valid data');
+  ctx.scene.leave();
+});
+//////
+
+//////////
+
 const wizardScene = new Scenes.WizardScene(
   'WIZARD_DIALOG',
 
@@ -388,6 +460,7 @@ const stage = new Scenes.Stage([
   wizardScene,
   initScene,
   learnSession,
+  runReflection,
 ]);
 
 bot.use(stage.middleware());
@@ -408,6 +481,40 @@ bot.start(async (ctx) => {
     'Добро пожаловать, я помогу выучиться масксимально быстро и сохранить мотивацию.',
   );
   await ctx.reply('/configure');
+});
+
+bot.command('statistic', (ctx) => {
+  const numberOfRuns = performedLearnSessions.length;
+  let rateUser = 'lazy))/';
+  switch (numberOfRuns) {
+    case 0:
+      rateUser = 'lazy))';
+      break;
+
+    case 1:
+      rateUser = 'driven';
+      break;
+
+    case 2:
+      rateUser = 'active';
+      break;
+    case 3:
+      rateUser = 'engaged';
+      break;
+
+    case 4:
+      rateUser = 'PRO';
+      break;
+
+    case numberOfRuns > 4:
+      rateUser = 'PRO';
+      break;
+
+    default:
+      rateUser = 'lazy))';
+  }
+  ctx.reply(`ваш рейтинг ${rateUser} количество забегов ${numberOfRuns}`);
+  console.log(performedLearnSessions.length);
 });
 
 bot.command('scene', async (ctx) => {
@@ -432,6 +539,7 @@ bot.command('stoplearn', async (ctx) => {
   if (!currentPomodoro) {
     ctx.reply('Нечего останавливать) у Вас нет текущей задачи!');
   } else {
+    currentPomodoro.forceInterrrupt();
     currentPomodoro = null;
     ctx.reply('учебная сессия остановленна!');
   }
@@ -471,6 +579,10 @@ bot.command('state', async (ctx) => {
   } else {
     ctx.reply('Нет Активной задачи, самое время начать!');
   }
+});
+
+bot.command('testpoll', (ctx) => {
+  ctx.telegram.sendPoll(ctx.chat.id, 'Как прошло?', ['good', 'norm']);
 });
 
 bot.command('wizard', (ctx) => ctx.scene.enter('WIZARD_DIALOG'));
