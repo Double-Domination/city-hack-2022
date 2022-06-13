@@ -18,7 +18,13 @@ const POMODORO_DURATION = 60 * 1000 * 45; //45 min
 
 let tmpLearnerData = {};
 
-const appIntervals = [];
+let performedLearnSessions = [];
+
+let currentPomodoro = null;
+
+let tempTargetRun = '';
+
+let appIntervals = [];
 const cleanUpIntervals = () => {
   appIntervals.map((currentIntervalID) => {
     clearInterval(currentIntervalID);
@@ -48,16 +54,16 @@ class LearnerRecord {
     this.educationProgramm = educationProgramm;
     this.performedPomadoroRuns = [];
     this.isActivePomodoroRun = false;
-    this.currentPomodoro = null;
+    // this.currentPomodoro = null;
   }
   addFinishedPomodaoroRun() {
-    this.performedPomadoroRuns.push(this.currentPomodoro);
+    // this.performedPomadoroRuns.push(this.currentPomodoro);
     this.isActivePomodoroRun = false;
-    this.currentPomodoro = null;
+    // this.currentPomodoro = null;
   }
   activePomodoroRun(recivedPomodoro) {
     this.isActivePomodoroRun = true;
-    this.currentPomodoro = recivedPomodoro;
+    // this.currentPomodoro = recivedPomodoro;
   }
 }
 
@@ -162,7 +168,8 @@ gender.enter(async (ctx) => {
     await ctx.reply(`отлично!`);
     console.log(tmpLearnerData);
 
-    ctx.scene.leave();
+    ctx.scene.enter('LEARN_SESSION');
+    // ctx.scene.leave();
   });
 });
 
@@ -179,7 +186,89 @@ gender.on('text', async (ctx) => {
 gender.on('message', (ctx) => {
   ctx.reply('must be a valid number');
 });
+//////
+const learnSession = new Scenes.BaseScene('LEARN_SESSION');
+learnSession.enter(async (ctx) => {
+  const startLearningSessionKeybord = {
+    reply_markup: JSON.stringify({
+      inline_keyboard: [
+        [
+          { text: 'ДА', callback_data: '1' },
+          { text: 'НЕТ', callback_data: '2' },
+        ],
+      ],
+    }),
+  };
+  await ctx.reply(
+    'Готовы начать учится прямо сейчас(всего 45 минут)?',
+    startLearningSessionKeybord,
+  );
+  await learnSession.on('callback_query', async (ctx) => {
+    // await ctx.reply(`отлично!`);
+    // console.log(tmpLearnerData);
+    if (ctx.callbackQuery.data === '1') {
+      ctx.reply('Какая будет цель забега?');
+      // await learnSession.on('text', async (ctx) => {
+      //   const curInput = await ctx.message.text;
+      //   curInput.log;
+      //   if (curInput.length > 2) {
+      //     // await ctx.reply('Цель должна быть строкой больше двух символов!');
+      //     currentPomodoro = new PomodoroRun(curInput);
+      //     await ctx.reply(
+      //       `Отлично! Начинаем ${currentPomodoro.targetOfRun}. Я оповещу вас когда таймер закончится!`,
+      //     );
+      //     // await ctx.scene.reenter();
+      //   } else {
+      //     ctx.reply('wrong data!');
+      //   }
+      // });
 
+      return;
+    } else {
+      currentPomodoro = null;
+      await ctx.reply('Как будкте готовы - активируйте команду /learn в меню');
+      ctx.scene.leave();
+    }
+
+    // ctx.scene.leave();
+  });
+
+  await learnSession.on('text', async (ctx) => {
+    const curInput = await ctx.message.text;
+    console.log(curInput);
+    if (curInput.length > 2) {
+      // await ctx.reply('Цель должна быть строкой больше двух символов!');
+      currentPomodoro = new PomodoroRun(curInput);
+      await ctx.reply(
+        `Отлично! Начинаем ${currentPomodoro.targetOfRun}. Я оповещу вас когда таймер закончится!`,
+      );
+      ctx.scene.leave();
+      // await ctx.scene.reenter();
+    } else {
+      ctx.reply('Должна быть строка больше 2 символов');
+    }
+  });
+
+  // learnSession.on('message', (ctx) => {
+  //   ctx.reply('Название цели должно быть текстовой строкой');
+  // });
+});
+
+// await learnSession.on('text', async (ctx) => {
+//   const curInput = Number(ctx.message.text);
+//   if (curInput && curInput > 0) {
+//     await ctx.reply('thx for answer');
+//     ctx.scene.enter('NAME_DIALOG');
+//   } else {
+//     await ctx.reply('wrong input data');
+//     ctx.scene.reenter();
+//   }
+// });
+// learnSession.on('message', (ctx) => {
+//   ctx.reply('must be a valid ');
+// });
+
+/////////
 const wizardScene = new Scenes.WizardScene(
   'WIZARD_DIALOG',
 
@@ -291,7 +380,14 @@ const initScene = new Scenes.WizardScene(
 // age,
 // educationProgramm,
 
-const stage = new Scenes.Stage([age, name, gender, wizardScene, initScene]);
+const stage = new Scenes.Stage([
+  age,
+  name,
+  gender,
+  wizardScene,
+  initScene,
+  learnSession,
+]);
 
 bot.use(stage.middleware());
 
@@ -299,8 +395,9 @@ bot.telegram.setMyCommands([
   { command: 'learn', description: 'Начать учебную сессию' },
   { command: 'stoplearn', description: 'остановить учебную сессию' },
   { command: 'configure', description: 'Настроики обучения' },
-  { command: 'delayed', description: 'Delayed msg' },
-  { command: 'interval', description: 'interval msg' },
+  // { command: 'delayed', description: 'Delayed msg' },
+  // { command: 'interval', description: 'interval msg' },
+  { command: 'statistic', description: 'статистика учёбы' },
   { command: 'cleaninterval', description: 'clenup intervals' },
 ]);
 
@@ -319,14 +416,24 @@ bot.command('gender', async (ctx) => {
   await ctx.scene.enter('GENDER_DIALOG');
 });
 
-bot.command('learn', (ctx) => {
-  ctx.reply('Цель забега: not implemented');
-
-  return null;
+bot.command('learn', async (ctx) => {
+  if (currentPomodoro) {
+    ctx.reply('У вас уже есть активная задача!');
+  } else {
+    currentPomodoro = 1;
+    await ctx.scene.enter('LEARN_SESSION');
+  }
 });
 
 // bot.command('wizard', (ctx) => wizardScene.enter('WIZARD1'));
-bot.command('stoplearn', (ctx) => ctx.reply('учебная сессия остановвленна'));
+bot.command('stoplearn', async (ctx) => {
+  if (!currentPomodoro) {
+    ctx.reply('Нечего останавливать) у Вас нет текущей задачи!');
+  } else {
+    currentPomodoro = null;
+    ctx.reply('учебная сессия остановленна!');
+  }
+});
 bot.command('configure', async (ctx) => {
   await ctx.reply('настраиваем');
   await ctx.scene.enter('NAME_DIALOG');
