@@ -1,0 +1,31 @@
+{
+  "name": "tg-bot-train",
+  "version": "1.0.0",
+  "description": "for education purpose",
+  "main": "index.js",
+  "scripts": {
+    "test": "testrun",
+    "dev": "nodemon index.js",
+    "start": "nodemon index.js",
+    "worker": "node index.js",
+    "alter": "nodemon alter.js",
+    "variant3": "nodemon variant3.js",
+    "variant4": "nodemon variant4.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Double-Domination/tg-bot-train.git"
+  },
+  "author": "K Dominus",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Double-Domination/tg-bot-train/issues"
+  },
+  "homepage": "https://github.com/Double-Domination/tg-bot-train#readme",
+  "dependencies": {
+    "@bot-base/callback-data": "^0.3.0",
+    "micro-bot": "^2.5.3",
+    "node-telegram-bot-api": "^0.57.0",
+    "telegraf": "^4.8.2"
+  }
+}
