@@ -53,6 +53,10 @@ const cleanUpIntervals = () => {
 
   appIntervals = [];
 };
+// checkStatistics every 90min to disable it execute /cleanintervals
+// const intervalID = setInterval((ctx) => {
+//   ctx.reply('Самое время чекнуть статисткику своей учёбы /statistic');
+// }, 5000);
 
 class LearnerRecord {
   constructor(
@@ -471,9 +475,9 @@ bot.telegram.setMyCommands([
   { command: 'state', description: 'текущая задача' },
   { command: 'configure', description: 'Настроики обучения' },
   // { command: 'delayed', description: 'Delayed msg' },
-  // { command: 'interval', description: 'interval msg' },
   { command: 'statistic', description: 'статистика учёбы' },
-  // { command: 'cleaninterval', description: 'clenup intervals' },
+  { command: 'interval', description: 'напоминания учёбы (демо раз в 2 мин)' },
+  { command: 'cleaninterval', description: 'Убрать все напомнания' },
 ]);
 
 bot.start(async (ctx) => {
@@ -557,15 +561,27 @@ bot.command('delayed', (ctx) => {
 
 bot.command('interval', (ctx) => {
   const intervalID = setInterval(() => {
-    ctx.reply('interval msg 3000');
-  }, 7000);
+    ctx.reply(
+      'Будет напоминать раз в 1 мин посотреть статистику /statistic что бы отключить /cleaninterval',
+    );
+  }, 60000);
+  appIntervals.push(intervalID);
 
-  ctx.reply(`interval is set  id${intervalID}`);
+  ctx.reply(
+    `Будет напоминать раз в 2 мин посотреть статистику /statistic is set  id${intervalID} что бы отключить /cleaninterval`,
+  );
 });
 
 bot.command('cleaninterval', (ctx) => {
-  ctx.reply('all interval cleared');
+  ctx.reply(' Все напоминания отключены');
   cleanUpIntervals();
+});
+
+bot.command('activenotifications', (ctx) => {
+  // checkStatistics every 90min to disable it execute /cleanintervals
+  const intervalID = setInterval((ctx) => {
+    ctx.reply('Самое время чекнуть статисткику своей учёбы /statistic');
+  }, 5000);
 });
 
 bot.command('state', async (ctx) => {
